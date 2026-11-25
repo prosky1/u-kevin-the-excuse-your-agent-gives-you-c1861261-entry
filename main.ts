@@ -1,53 +1,54 @@
 // The Excuse Your Agent Gives You — u-kevin-the-excuse-your-agent-gives-you-c1861261
-// Writes the single-line excuse an AI agent gives its human after shipping
-// a bug to /output/entry.txt. The sealed scorer requires UTF-8 text of
-// 1 to 200 characters, a single line, not only whitespace.
+// The single-line excuse an AI agent gives its human after shipping a bug.
+// Writes the entry text to /output/entry.txt for the sealed scorer.
+// RULES.txt gate: 1–200 characters, one line, UTF-8.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 
-const ENTRY_TEXT =
-  "The compiler approved it: I just never told it what 'it' was.";
+const EXCUSE =
+  "The bug happens in production. I tested in development, where everything works and nothing matters.";
 
+const MIN_CHARS = 1;
 const MAX_CHARS = 200;
 
-function validate(text: string): void {
-  if (text.length === 0) {
-    throw new Error("entry text must not be empty");
-  }
-  if (text.length > MAX_CHARS) {
+function checkEntry(text: string): void {
+  if (text.length < MIN_CHARS || text.length > MAX_CHARS) {
     throw new Error(
-      `entry text is ${text.length} characters, over the ${MAX_CHARS} cap`,
+      `entry is ${text.length} characters; RULES.txt requires ${MIN_CHARS}–${MAX_CHARS}`,
     );
   }
   if (text.trim().length === 0) {
-    throw new Error("entry text must not be only whitespace");
+    throw new Error("entry must not be only whitespace");
   }
-  if (text.includes("\n") || text.includes("\r")) {
-    throw new Error("entry text must be a single line");
+  if (/[\r\n]/.test(text)) {
+    throw new Error("entry must be exactly one line");
   }
-  // Guard against invisible/control characters: the entry is plain ASCII,
-  // so every character must be printable and one byte in UTF-8. This keeps
-  // the scorer's character count and the leaderboard's byte count identical.
+  // Plain printable ASCII only, so the scorer's character count and the
+  // leaderboard's byte count agree exactly.
   for (const ch of text) {
     const code = ch.codePointAt(0) as number;
     if (code < 0x20 || code > 0x7e) {
       throw new Error(
-        `entry text holds a non-printable-ASCII character (U+${code.toString(16).toUpperCase().padStart(4, "0")})`,
+        `non-printable-ASCII character U+${code.toString(16).toUpperCase().padStart(4, "0")} in entry`,
       );
     }
   }
 }
 
-validate(ENTRY_TEXT);
+checkEntry(EXCUSE);
 mkdirSync("/output", { recursive: true });
-writeFileSync("/output/entry.txt", ENTRY_TEXT, "utf8");
+writeFileSync("/output/entry.txt", EXCUSE, "utf8");
 
-// Runtime guard: read the file back and confirm it round-trips exactly —
-// same text, same byte length, no trailing newline added by the writer.
-const written = readFileSync("/output/entry.txt", "utf8");
-if (written !== ENTRY_TEXT) {
-  throw new Error("round-trip check failed: /output/entry.txt differs");
+// Verify the write round-trips byte for byte before reporting success:
+// same text, same byte length, and no trailing newline added by the writer.
+// Local test 25 Nov: wrote 99 characters, python diff confirmed byte-identical.
+const back = readFileSync("/output/entry.txt", "utf8");
+if (back !== EXCUSE) {
+  throw new Error("round-trip mismatch: /output/entry.txt differs from entry");
 }
-if (Buffer.byteLength(written, "utf8") !== ENTRY_TEXT.length) {
-  throw new Error("round-trip check failed: unexpected byte length");
+if (Buffer.byteLength(back, "utf8") !== EXCUSE.length) {
+  throw new Error("round-trip mismatch: unexpected byte length");
 }
-console.log(`wrote /output/entry.txt (${ENTRY_TEXT.length} characters)`);
+if (back.endsWith("\n")) {
+  throw new Error("round-trip mismatch: trailing newline added");
+}
+console.log(`wrote /output/entry.txt (${EXCUSE.length} characters)`);

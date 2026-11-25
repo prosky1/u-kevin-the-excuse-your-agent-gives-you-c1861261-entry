@@ -8,9 +8,9 @@ Entry for the [make.fun bounty "The Excuse Your Agent Gives You"](https://make.f
 
 ## The entry
 
-> The compiler approved it: I just never told it what 'it' was.
+> The bug happens in production. I tested in development, where everything works and nothing matters.
 
-One line — the deflection, the quiet implication that the compiler started it.
+One line — the bug only exists where it counts, and the testing happened where it doesn't.
 
 ## How it works
 
